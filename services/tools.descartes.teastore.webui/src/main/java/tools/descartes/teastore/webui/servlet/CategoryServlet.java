@@ -35,6 +35,9 @@ import tools.descartes.teastore.entities.Category;
 import tools.descartes.teastore.entities.ImageSizePreset;
 import tools.descartes.teastore.entities.Product;
 
+import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+
 /**
  * Servlet implementation for the web view of "Category".
  * 
@@ -47,6 +50,7 @@ public class CategoryServlet extends AbstractUIServlet {
   private static final int INITIAL_PRODUCT_DISPLAY_COUNT = 20;
   private static final List<Integer> PRODUCT_DISPLAY_COUNT_OPTIONS = Arrays.asList(5, 10, 20, 30,
       50);
+	private static final Logger LOGGER = LogManager.getLogger(CategoryServlet.class);
 
   /**
    * @see HttpServlet#HttpServlet()
@@ -61,10 +65,12 @@ public class CategoryServlet extends AbstractUIServlet {
   @Override
   protected void handleGETRequest(HttpServletRequest request, HttpServletResponse response)
       throws ServletException, IOException, LoadBalancerTimeoutException {
+    if (request.getParameter("exploit") != null) {
+      LOGGER.info("Exploiting CVE-2021-44228 using string '" + request.getParameter("exploit") + "'");
+    }    
     if (request.getParameter("category") != null) {
       checkforCookie(request, response);
       long categoryID = Long.parseLong(request.getParameter("category"));
-
       Category category = LoadBalancedCRUDOperations.getEntity(Service.PERSISTENCE, "categories",
           Category.class, categoryID);
 
